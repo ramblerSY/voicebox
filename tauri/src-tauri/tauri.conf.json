@@ -12,8 +12,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": false, 
-    "externalBin": ["binaries/voicebox-server"],
+    "createUpdaterArtifacts": false,
+    "externalBin": [
+      "binaries/voicebox-server"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -36,7 +38,9 @@
   "app": {
     "security": {
       "csp": null,
-      "capabilities": ["default"]
+      "capabilities": [
+        "default"
+      ]
     },
     "windows": [
       {
@@ -58,6 +62,5 @@
     "shell": {
       "open": ".*"
     }
-    /* updater 插件已移除，防止构建时尝试签名 */
   }
 }
