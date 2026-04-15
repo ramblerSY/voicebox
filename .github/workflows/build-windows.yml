@@ -21,32 +21,19 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller wheel transformers huggingface-hub
+          pip install pyinstaller
           pip install -r backend/requirements.txt
-          # 关键修复：直接进入 backend 目录安装，跳过 editable 模式的检查错误
-          cd backend && python setup.py develop && cd ..
 
       - name: Build Python server
         shell: bash
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-          QWEN_TTS_PATH: ${{ github.workspace }}/backend
         run: |
-          # 【手术 1】强制注入离线参数（针对 Qwen3 逻辑）
-          # 这会扫描所有 python 文件并关闭联网检测
-          find backend -name "*.py" -exec sed -i 's/from_pretrained(model_id/from_pretrained(model_id, local_files_only=True/g' {} +
-          
-          # 【手术 2】针对 transformers 可能存在的全局检测（Issue 193）
-          # 在加载前强制声明离线环境
-          sed -i '1i import os; os.environ["HF_HUB_OFFLINE"] = "1"; os.environ["TRANSFORMERS_OFFLINE"] = "1"' backend/main.py || true
-
           cd backend
           python build_binary.py
 
-          # 这里的 PLATFORM 必须和 Tauri 的 sidecar 定义严格一致
-          PLATFORM="x86_64-pc-windows-msvc"
+          PLATFORM=$(rustc --print host-tuple)
           mkdir -p ../tauri/src-tauri/binaries
           cp dist/voicebox-server.exe ../tauri/src-tauri/binaries/voicebox-server-${PLATFORM}.exe
+          echo "Built voicebox-server-${PLATFORM}.exe"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
