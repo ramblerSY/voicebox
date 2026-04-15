@@ -21,19 +21,33 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller
+          # 1. 显式安装打包工具
+          pip install pyinstaller wheel 
+          # 2. 强制安装 transformers，确保元数据完整
+          pip install --force-reinstall transformers huggingface-hub
+          # 3. 安装项目依赖
           pip install -r backend/requirements.txt
+          # 4. 以可编辑模式安装本地 qwen-tts，解决 metadata 报错
+          cd backend && pip install -e . && cd ..
 
       - name: Build Python server
         shell: bash
+        env:
+          # 告诉编译器本地源码路径
+          PYTHONPATH: ${{ github.workspace }}/backend
+          QWEN_TTS_PATH: ${{ github.workspace }}/backend
         run: |
+          # 5. 【核心修复】在编译前直接修改源码，注入离线参数
+          # 找到加载模型的文件，强行插入 local_files_only=True
+          find backend -name "*.py" -exec sed -i 's/from_pretrained(model_id/from_pretrained(model_id, local_files_only=True/g' {} +
+
           cd backend
           python build_binary.py
 
-          PLATFORM=$(rustc --print host-tuple)
+          # 6. 统一 Sidecar 二进制文件名后缀
+          PLATFORM="x86_64-pc-windows-msvc"
           mkdir -p ../tauri/src-tauri/binaries
           cp dist/voicebox-server.exe ../tauri/src-tauri/binaries/voicebox-server-${PLATFORM}.exe
-          echo "Built voicebox-server-${PLATFORM}.exe"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
